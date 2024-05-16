@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:news_app/bloc/news_bloc.dart';
+import 'package:news_app/data/news_repository.dart';
 import 'package:news_app/screens/home_screen.dart';
 
 void main() {
@@ -20,7 +23,11 @@ class _MyAppState extends State<MyApp> {
         scaffoldBackgroundColor: Colors.white,
       ),
       debugShowCheckedModeBanner: false,
-      home: HomeScreen(),
+      home: BlocProvider(
+        create: (context) => NewsBloc(newsRepository: NewsRepository()),
+        child: const HomeScreen(),
+      ),
+
     );
   }
 }
