@@ -1,4 +1,12 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:news_app/bloc/news_bloc.dart';
+import 'package:news_app/bloc/news_state.dart';
+import 'package:news_app/models/article_data_model.dart';
+import 'package:news_app/widgets/article_card.dart';
+
+import '../bloc/news_event.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -8,81 +16,87 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  late NewsBloc newsBloc;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    newsBloc = BlocProvider.of<NewsBloc>(context);
+    newsBloc.add(FetchNewsEvent());
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >
+        _scrollController.position.maxScrollExtent * 0.7) {
+      newsBloc.add(const FetchMoreNewsEvent());
+    }
+  }
+
+  Future<void> _refresh() async {
+    newsBloc.add(FetchNewsEvent());
+    await Future.delayed(const Duration(seconds: 2));
+  }
+
   @override
   Widget build(BuildContext context) {
-    var width = MediaQuery.of(context).size.width;
-    var height = MediaQuery.of(context).size.height;
-    return SafeArea(
-      child: Scaffold(
-          body: Stack(
-        children: [
-          Container(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  height: height * 0.01,
-                ),
-                Container(
-                    margin: EdgeInsets.only(left: width * 0.03),
+    return BlocBuilder<NewsBloc, NewsState>(
+      builder: (context, state) {
+        if (state is NewsLoadingState) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (state is NewsSuccessState) {
+          final List<Articles> newsData = state.newsData.articles!;
+          return SafeArea(
+            child: Scaffold(
+              body: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
                     child: Text(
                       "Flutter News".toUpperCase(),
-                      style:
-                          TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
-                    )),
-                SizedBox(
-                  height: height * 0.01,
-                ),
-                Container(
-                  height: 1,
-                  color: Colors.grey.withOpacity(0.8),
-                  width: width,
-                  margin: EdgeInsets.symmetric(horizontal: width * 0.01),
-                )
-              ],
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: RefreshIndicator(
+                        onRefresh: _refresh,
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          itemCount: newsData.length + 1,
+                          itemBuilder: (context, index) {
+                            if (index < newsData.length) {
+                              final article = newsData[index];
+                              //Articles article = newsBloc.loadedArticles![index];
+                              return CustomArticleCard(article: article);
+                            } else {
+                              return const Center(
+                                child: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: CircularProgressIndicator()),
+                              );
+                            }
+                          },
+                        )),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Container(
-            color: Colors.white,
-            margin: EdgeInsets.only(top: height * 0.08),
-            child: ListView.builder(
-                itemCount: 12,
-                itemBuilder: (context, index) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [BoxShadow(
-                        blurRadius: 1,
-                        color: Colors.grey,
-                        offset: Offset(0,2),
-                        spreadRadius: 1
-                      )]
-                    ),
-                   // color: Colors.grey,
-                    height: height * 0.15,
-                    margin: EdgeInsets.only(bottom: height * 0.01, top: height * 0.01, left: width * 0.02, right: width * 0.02),
-                    child: Row(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(10),
-                                topRight: Radius.circular(10)
-                              ),
-                            image: DecorationImage(image: NetworkImage("https://static01.nyt.com/images/2024/05/19/multimedia/19columbia-protestpolitics-01-wmbv/19columbia-protestpolitics-01-wmbv-threeByTwoMediumAt2X.jpg?format=pjpg&quality=75&auto=webp&disable=upscale"),
-                            fit: BoxFit.cover)
-                          ),
-                          width: width * 0.3,
-                          height: height * 0.15,
-                        )
-                      ],
-                    ),
-                  );
-                }),
-          )
-        ],
-      )),
+          );
+        } else {
+          return const Center(child: Text("Failed to load data"));
+        }
+      },
     );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 }
