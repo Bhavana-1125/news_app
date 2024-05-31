@@ -8,11 +8,11 @@ abstract class NewsState extends Equatable {
   List<Object> get props => [];
 }
 
-class NewsBlocInitial extends NewsState{}
+class NewsBlocInitial extends NewsState {}
 
-class NewsLoadingState extends NewsState{}
+class NewsLoadingState extends NewsState {}
 
-class NewsSuccessState extends NewsState{
+class NewsSuccessState extends NewsState {
   final ArticleModel newsData;
 
   const NewsSuccessState({required this.newsData});
@@ -21,4 +21,4 @@ class NewsSuccessState extends NewsState{
   List<Object> get props => [newsData];
 }
 
-class NewsFailureState extends NewsState{}
+class NewsFailureState extends NewsState {}

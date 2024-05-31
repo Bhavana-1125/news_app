@@ -7,14 +7,7 @@ abstract class NewsEvent extends Equatable {
   List<Object> get props => [];
 }
 
-class FetchNewsEvent extends NewsEvent {
-  final int page;
-
-  const FetchNewsEvent({required this.page});
-
-  @override
-  List<Object> get props => [page];
-}
+class FetchNewsEvent extends NewsEvent {}
 
 class FetchMoreNewsEvent extends NewsEvent {
   const FetchMoreNewsEvent();
@@ -22,4 +15,3 @@ class FetchMoreNewsEvent extends NewsEvent {
   @override
   List<Object> get props => [];
 }
-

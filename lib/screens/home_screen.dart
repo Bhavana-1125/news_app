@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app/bloc/news_bloc.dart';
@@ -16,25 +17,36 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late NewsBloc newsBloc;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     newsBloc = BlocProvider.of<NewsBloc>(context);
-    newsBloc.add( const FetchNewsEvent(page: 1));
+    newsBloc.add(FetchNewsEvent());
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >
+        _scrollController.position.maxScrollExtent * 0.7) {
+      newsBloc.add(const FetchMoreNewsEvent());
+    }
+  }
+
+  Future<void> _refresh() async {
+    newsBloc.add(FetchNewsEvent());
+    await Future.delayed(const Duration(seconds: 2));
   }
 
   @override
   Widget build(BuildContext context) {
-    // var width = MediaQuery.of(context).size.width;
-    // var height = MediaQuery.of(context).size.height;
     return BlocBuilder<NewsBloc, NewsState>(
       builder: (context, state) {
         if (state is NewsLoadingState) {
           return const Center(child: CircularProgressIndicator());
         } else if (state is NewsSuccessState) {
           final List<Articles> newsData = state.newsData.articles!;
-
           return SafeArea(
             child: Scaffold(
               body: Column(
@@ -51,23 +63,25 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   Expanded(
-                    child: NotificationListener<ScrollNotification>(
-                      onNotification: (ScrollNotification scrollInfo) {
-                        if (scrollInfo is ScrollEndNotification &&
-                            scrollInfo.metrics.pixels ==
-                                scrollInfo.metrics.maxScrollExtent) {
-                          newsBloc.add(const FetchMoreNewsEvent());
-                        }
-                        return true;
-                      },
-                    child: ListView.builder(
-                      itemCount: newsData.length,
-                      itemBuilder: (context, index) {
-                        final article = newsData[index];
-                        return CustomArticleCard(article: article);
-                      },
-                    ),
-                  ),
+                    child: RefreshIndicator(
+                        onRefresh: _refresh,
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          itemCount: newsData.length + 1,
+                          itemBuilder: (context, index) {
+                            if (index < newsData.length) {
+                              final article = newsData[index];
+                              //Articles article = newsBloc.loadedArticles![index];
+                              return CustomArticleCard(article: article);
+                            } else {
+                              return const Center(
+                                child: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: CircularProgressIndicator()),
+                              );
+                            }
+                          },
+                        )),
                   ),
                 ],
               ),
@@ -79,9 +93,10 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 }
-
-
-
-
-
